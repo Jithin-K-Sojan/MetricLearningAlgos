@@ -1,0 +1,70 @@
+
+```{r}
+#Library imports for dataset and SVM
+library(datasets)
+library(e1071)
+```
+
+
+```{r}
+pca <- function(myData){
+  Iris_pca <-  princomp(myData[,1:4], cor = TRUE, score = TRUE)
+}
+```
+
+
+```{r}
+
+#Importing the dataset
+data(iris)
+
+cat("\nSummary of original dataset\n")
+summary(iris)
+myData <- data.frame(iris)
+
+Iris_pca <- pca(myData)
+summary(Iris_pca)
+postPCAdata <- data.frame(Iris_pca$scores[1:150,1:2])
+
+species <- data.frame(iris[,5])
+total <- cbind(postPCAdata,species)
+
+names(total)[1] <- "Component1"
+names(total)[2] <- "Component2"
+names(total)[3] <- "Species"
+total
+cat("\nSummary of transformed dataset\n")
+summary(total)
+
+
+trainIndices <- sample(150,110)
+trainSet <- total[trainIndices,]  #Training set with 110 entries
+testSet <-total[-trainIndices,]   #Testing set with 40 entries
+
+```
+
+```{r}
+
+# TRAINING THE DATA USING SVM
+Iris_svm <- svm(formula = Species~. , data = trainSet, type = "C-classification", kernal = "linear")
+trainPrediction <- predict(Iris_svm, trainSet)
+trainPredTable <- table(trainSet$Species, trainPrediction)
+cat("\nConfusion Matrix on Training Set\n\n")
+trainPredTable
+plot(Iris_svm,trainSet)
+
+cat("\nTraining accuracy is : ",100*(trainPredTable[1,1]+trainPredTable[2,2]+trainPredTable[3,3])/sum(trainPredTable),"%")
+```
+
+```{r}
+# TESTING THE DATA USING SVM
+
+testPrediction <- predict(Iris_svm, testSet)
+testPredTable <- table(testSet$Species, testPrediction)
+cat("\nConfusion Matrix on Test Set\n\n")
+testPredTable
+cat("\nTesting accuracy is : ",100* (testPredTable[1,1]+testPredTable[2,2]+testPredTable[3,3])/sum(testPredTable),"%")
+
+plot(Iris_svm, testSet)
+```
+

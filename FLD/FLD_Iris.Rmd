@@ -1,0 +1,166 @@
+```{r}
+#Library imports for dataset, SVM and math math functions like inverse and eigen computation
+library(datasets) 
+library(e1071)
+library(MASS)
+```
+
+
+```{r}
+# MEAN VECTOR CALCULATION
+
+meanmatrix <- function(myData){
+  myDataMatrix = data.matrix(myData)
+  avg_mat= matrix(0,3,4)
+  for (entry in 1:150){
+    x <- matrix(0,1,4)
+    x <- (avg_mat[c(myDataMatrix[entry,5]),]) + (myDataMatrix[entry,1:4])
+    avg_mat[c(myDataMatrix[entry,5]),] = x
+  }
+  Mean_matrix = avg_mat/50
+}
+
+
+ # Mean_matrix
+overallmean <- function(iris){
+  overall_mean = matrix(0,1,4)
+  for (i in 1:4){
+    overall_mean[i] = mean(iris[,i])
+  }
+  overall_mean
+}
+
+```
+
+
+```{r}
+# SCATTER WITHIN CLASS
+scatterwithin <- function(myData, avg_mat){
+  myDataMatrix = data.matrix(myData)
+  Scatter_W = matrix(0,4,4)
+  for (row_n in 1:150){
+    class_scat_mat = matrix(0,4,4)
+    sub <-  myDataMatrix[row_n,1:4] - avg_mat[c(myDataMatrix[row_n,5]),]
+    class_scat_mat <- class_scat_mat + (data.matrix(sub)) %*% t(data.matrix(sub))
+    Scatter_W <- Scatter_W + class_scat_mat
+  }
+  cat("\n")
+  print(Scatter_W)
+  cat("\n")
+  Scatter_W
+}
+```
+
+
+```{r}
+# SCATTER BETWEEN CLASSES
+scatterbetween <- function(Mean_matrix, overall_mean){
+  Scatter_B = matrix(0,4,4)
+  for (i in 1:3){
+    sub = (Mean_matrix[i,]) - overall_mean
+    sub
+    Scatter_B = Scatter_B + 50*(t(sub) %*% (sub))
+  }
+  cat("\n")
+  print(Scatter_B)
+  cat("\n")
+  Scatter_B
+}  
+```
+
+
+```{r}
+# Calculating eigen values
+eigencalc <- function(Scatter_W, Scatter_B){
+  eg <- eigen(solve(data.matrix(Scatter_W))%*% data.matrix(Scatter_B))
+  eg
+}
+```
+
+
+
+```{r}
+# Dimmension Reduction and Transformation
+dimmensionred <- function(eg, myData){
+  W_mat = array(c(t(eg$vectors[,1]),t(eg$vectors[,2])), dim = c(4,2))
+  X_LDA = data.matrix(myData[,1:4]) %*% W_mat
+  X_LDA
+}
+
+
+fld <- function(myData){
+  data(iris)
+  mean_Matrix = meanmatrix(myData)     # Mean of each feature of the dataset based on label
+  overallMean <- overallmean(iris)  # Overall mean of each feature
+  scatterW <- scatterwithin(myData,mean_Matrix) # Scatter within the classes
+  scatterB <- scatterbetween(mean_Matrix, overallMean) # Scatter between classes
+  eigens <- eigencalc(scatterW, scatterB) # Eigenvectors and corresponding values to get linear discriminants
+  cat("\nVariance for each eigenvalue :\n")
+  cat("Dim 1:",100 * eigens$values[1]/ sum(eigens$values), "%\n")
+  cat("Dim 2:",max(100 * eigens$values[2]/ sum(eigens$values)), "%\n")
+  cat("Dim 3:",max(100 * eigens$values[3]/ sum(eigens$values)), "%\n")
+  cat("Dim 4:",max(0,100 * eigens$values[4]/ sum(eigens$values)), "%\n")
+  newFeatures <- dimmensionred(eigens, myData)  # Choosing new feature subspace
+  }
+```
+
+
+```{r}
+
+#Importing dataset
+data(iris)
+cat("\nSummary of original dataset\n")
+summary(iris)
+myData <- data.frame(iris)
+
+transformedDataset <- fld(myData)
+
+species <- data.frame(iris[,5])
+total <- cbind(transformedDataset,species)
+names(total)[1] <- "dim1"
+names(total)[2] <- "dim2"
+names(total)[3] <- "Species"
+
+cat("\nSummary of transformed dataset\n")
+summary(total)
+
+trainIndices <- sample(150,110) 
+trainSet <- total[trainIndices,] #Training set with 110 entries
+testSet <-total[-trainIndices,]  #Testing set with 40 entries
+
+```
+
+
+```{r}
+
+# TRAINING THE DATA USING SVM
+Iris_svm <- svm(formula = Species~. , data = trainSet, type = "C-classification")
+trainPrediction <- predict(Iris_svm, trainSet)
+trainPredTable <- table(trainSet$Species, trainPrediction)
+cat("\nConfusion Matrix on Training Set\n\n")
+trainPredTable
+plot(Iris_svm,trainSet)
+
+cat("\nTraining accuracy is : ", 100*(trainPredTable[1,1]+trainPredTable[2,2]+trainPredTable[3,3])/sum(trainPredTable),"%")
+
+#summary(Iris_svm)
+
+```
+
+
+
+```{r}
+# TESTING THE DATA USING SVM
+
+testPrediction <- predict(Iris_svm, testSet)
+testPredTable <- table(testSet$Species, testPrediction)
+cat("\nConfusion Matrix on Test Set\n\n")
+testPredTable
+cat("\nTesting accuracy is : ",100* (testPredTable[1,1]+testPredTable[2,2]+testPredTable[3,3])/sum(testPredTable),"%")
+
+plot(Iris_svm, testSet)
+
+
+```
+
+
