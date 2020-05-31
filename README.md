@@ -1,4 +1,4 @@
-# MetricLearningAlgos
+# metric-learning
 
 This is an implementation of two supervised metric learning algorithms, namely Fisher's Linear Discriminant and Neighbourhood Component Analysis.
 
